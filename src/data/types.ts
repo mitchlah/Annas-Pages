@@ -49,6 +49,7 @@ export interface Subscription {
 export interface Settings {
   baseCurrency: string;
   themeColor: string;
+  darkMode: boolean;
 }
 
 export interface AppData {
@@ -60,6 +61,7 @@ export interface AppData {
 export const DEFAULT_SETTINGS: Settings = {
   baseCurrency: 'USD',
   themeColor: '#6d4aff',
+  darkMode: false,
 };
 
 export const PURCHASE_TYPE_LABELS: Record<PurchaseType, string> = {

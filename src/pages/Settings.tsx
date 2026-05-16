@@ -130,6 +130,14 @@ export default function Settings() {
             onChange={(e) => updateSettings({ themeColor: e.target.value })}
           />
         </label>
+        <label className="field-check">
+          <input
+            type="checkbox"
+            checked={settings.darkMode}
+            onChange={(e) => updateSettings({ darkMode: e.target.checked })}
+          />
+          <span>Dark mode</span>
+        </label>
       </section>
 
       <section className="card">

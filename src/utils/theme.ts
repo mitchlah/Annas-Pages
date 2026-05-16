@@ -7,8 +7,10 @@ export const THEME_PRESETS: { name: string; color: string }[] = [
   { name: 'Coffee', color: '#5b4636' },
 ];
 
-export function applyTheme(color: string): void {
-  document.documentElement.style.setProperty('--brand', color);
+export function applyTheme(color: string, darkMode: boolean): void {
+  const root = document.documentElement;
+  root.style.setProperty('--brand', color);
+  root.dataset.theme = darkMode ? 'dark' : 'light';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', color);
+  if (meta) meta.setAttribute('content', darkMode ? '#16141c' : color);
 }

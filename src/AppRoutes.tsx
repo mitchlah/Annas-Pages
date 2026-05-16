@@ -16,8 +16,8 @@ export default function AppRoutes() {
   const { settings } = useData();
 
   useEffect(() => {
-    applyTheme(settings.themeColor);
-  }, [settings.themeColor]);
+    applyTheme(settings.themeColor, settings.darkMode);
+  }, [settings.themeColor, settings.darkMode]);
 
   return (
     <Routes>

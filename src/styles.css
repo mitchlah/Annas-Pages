@@ -4,13 +4,22 @@
   --ink: #241f2e;
   --muted: #837b91;
   --brand: #6d4aff;
-  --brand-soft: color-mix(in srgb, var(--brand) 12%, white);
+  --brand-soft: color-mix(in srgb, var(--brand) 16%, var(--surface));
   --accent: var(--brand);
   --warn: #c2412d;
   --soon: #2f7d5b;
   --line: #e6e2ef;
   --radius: 14px;
   --shadow: 0 2px 10px rgba(40, 30, 60, 0.08);
+}
+
+[data-theme='dark'] {
+  --bg: #16141c;
+  --surface: #221f2c;
+  --ink: #ece9f2;
+  --muted: #9a93a8;
+  --line: #332f3f;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
 * {
