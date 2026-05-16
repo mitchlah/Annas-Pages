@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { Purchase } from '../data/types';
 import { PURCHASE_TYPE_LABELS } from '../data/types';
+import { useData } from '../data/store';
 import { daysUntil, formatCurrency, formatDate } from '../utils/format';
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
 
 export default function PurchaseCard({ purchase, onMarkDelivered }: Props) {
   const navigate = useNavigate();
+  const { settings } = useData();
+  const currency = purchase.currency ?? settings.baseCurrency;
   const days =
     purchase.status === 'ordered'
       ? daysUntil(purchase.expectedDelivery)
@@ -42,29 +45,51 @@ export default function PurchaseCard({ purchase, onMarkDelivered }: Props) {
             navigate(`/purchases/${purchase.id}/edit`);
         }}
       >
-        <div className="purchase-top">
-          <h3 className="purchase-title">{purchase.title || 'Untitled'}</h3>
-          <span className="purchase-cost">
-            {formatCurrency(purchase.totalCost)}
-          </span>
-        </div>
-        <p className="purchase-meta">
-          {[purchase.author, purchase.edition].filter(Boolean).join(' · ') ||
-            'No author'}
-        </p>
-        <div className="purchase-tags">
-          <span className="tag">{PURCHASE_TYPE_LABELS[purchase.purchaseType]}</span>
-          {purchase.store && <span className="tag">{purchase.store}</span>}
-          {purchase.status === 'ordered' ? (
-            <span className={deliveryClass}>
-              {deliveryNote ||
-                `Expected ${formatDate(purchase.expectedDelivery)}`}
-            </span>
+        <div className="purchase-row">
+          {purchase.coverUrl ? (
+            <img
+              className="purchase-cover"
+              src={purchase.coverUrl}
+              alt=""
+            />
           ) : (
-            <span className="pill pill-done">
-              Delivered {formatDate(purchase.deliveredDate || '')}
-            </span>
+            <div className="purchase-cover purchase-cover-empty" aria-hidden>
+              📖
+            </div>
           )}
+          <div className="purchase-body">
+            <div className="purchase-top">
+              <h3 className="purchase-title">
+                {purchase.title || 'Untitled'}
+              </h3>
+              <span className="purchase-cost">
+                {formatCurrency(purchase.totalCost, currency)}
+              </span>
+            </div>
+            <p className="purchase-meta">
+              {[purchase.author, purchase.edition]
+                .filter(Boolean)
+                .join(' · ') || 'No author'}
+            </p>
+            <div className="purchase-tags">
+              <span className="tag">
+                {PURCHASE_TYPE_LABELS[purchase.purchaseType]}
+              </span>
+              {purchase.store && (
+                <span className="tag">{purchase.store}</span>
+              )}
+              {purchase.status === 'ordered' ? (
+                <span className={deliveryClass}>
+                  {deliveryNote ||
+                    `Expected ${formatDate(purchase.expectedDelivery)}`}
+                </span>
+              ) : (
+                <span className="pill pill-done">
+                  Delivered {formatDate(purchase.deliveredDate || '')}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
       {purchase.status === 'ordered' && onMarkDelivered && (

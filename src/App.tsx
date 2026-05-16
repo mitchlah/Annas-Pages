@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -6,8 +7,16 @@ import AddEditPurchase from './pages/AddEditPurchase';
 import Library from './pages/Library';
 import Subscriptions from './pages/Subscriptions';
 import Settings from './pages/Settings';
+import { useData } from './data/store';
+import { applyTheme } from './utils/theme';
 
 export default function App() {
+  const { settings } = useData();
+
+  useEffect(() => {
+    applyTheme(settings.themeColor);
+  }, [settings.themeColor]);
+
   return (
     <Routes>
       <Route element={<Layout />}>

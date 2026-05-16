@@ -35,9 +35,13 @@ export default function Library() {
               className="book-tile"
               onClick={() => navigate(`/purchases/${b.id}/edit`)}
             >
-              <div className="book-spine" aria-hidden>
-                📖
-              </div>
+              {b.coverUrl ? (
+                <img className="book-cover" src={b.coverUrl} alt="" />
+              ) : (
+                <div className="book-cover book-cover-empty" aria-hidden>
+                  📖
+                </div>
+              )}
               <span className="book-title">{b.title || 'Untitled'}</span>
               <span className="book-author">{b.author || '—'}</span>
               <span className="book-date">

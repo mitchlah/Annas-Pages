@@ -6,12 +6,13 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { AppData, Purchase, Subscription } from './types';
+import type { AppData, Purchase, Settings, Subscription } from './types';
 import { createId, exportData, loadData, saveData } from './repository';
 
 interface DataContextValue {
   purchases: Purchase[];
   subscriptions: Subscription[];
+  settings: Settings;
   addPurchase: (p: Omit<Purchase, 'id'>) => void;
   updatePurchase: (p: Purchase) => void;
   deletePurchase: (id: string) => void;
@@ -19,6 +20,7 @@ interface DataContextValue {
   addSubscription: (s: Omit<Subscription, 'id'>) => void;
   updateSubscription: (s: Subscription) => void;
   deleteSubscription: (id: string) => void;
+  updateSettings: (partial: Partial<Settings>) => void;
   exportAll: () => void;
 }
 
@@ -35,6 +37,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     () => ({
       purchases: data.purchases,
       subscriptions: data.subscriptions,
+      settings: data.settings,
       addPurchase: (p) =>
         setData((d) => ({
           ...d,
@@ -78,6 +81,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setData((d) => ({
           ...d,
           subscriptions: d.subscriptions.filter((x) => x.id !== id),
+        })),
+      updateSettings: (partial) =>
+        setData((d) => ({
+          ...d,
+          settings: { ...d.settings, ...partial },
         })),
       exportAll: () => exportData(data),
     }),

@@ -1,29 +1,28 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '../data/store';
 import type { Purchase, PurchaseType } from '../data/types';
 import PageHeader from '../components/PageHeader';
 import { todayIso } from '../utils/format';
+import { toTitleCase, uniqueValues } from '../utils/text';
+import { CURRENCIES, fetchRate } from '../utils/currency';
+import { readImageAsDataUrl, searchCover } from '../utils/covers';
 
-const emptyForm: Omit<Purchase, 'id'> = {
-  dateOfPurchase: todayIso(),
-  title: '',
-  edition: '',
-  author: '',
-  genre: '',
-  store: '',
-  orderNumber: '',
-  price: 0,
-  shipping: 0,
-  totalCost: 0,
-  expectedDelivery: '',
-  paymentMethod: '',
-  notes: '',
-  purchaseType: 'store',
-  subscriptionId: undefined,
-  status: 'ordered',
-  deliveredDate: undefined,
-};
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+
+function splitDelivery(value: string): { month: string; day: string } {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return { month: value.slice(0, 7), day: value.slice(8, 10) };
+  }
+  if (/^\d{4}-\d{2}$/.test(value)) return { month: value, day: '' };
+  return { month: '', day: '' };
+}
+
+function joinDelivery(month: string, day: string): string {
+  if (!month) return '';
+  if (!day) return month;
+  return `${month}-${day.padStart(2, '0')}`;
+}
 
 export default function AddEditPurchase() {
   const { id } = useParams();
@@ -31,6 +30,7 @@ export default function AddEditPurchase() {
   const {
     purchases,
     subscriptions,
+    settings,
     addPurchase,
     updatePurchase,
     deletePurchase,
@@ -41,13 +41,73 @@ export default function AddEditPurchase() {
     [purchases, id],
   );
 
+  const emptyForm: Omit<Purchase, 'id'> = {
+    dateOfPurchase: todayIso(),
+    title: '',
+    edition: '',
+    author: '',
+    genre: '',
+    store: '',
+    orderNumber: '',
+    price: 0,
+    shipping: 0,
+    totalCost: 0,
+    currency: settings.baseCurrency,
+    baseTotalCost: undefined,
+    coverUrl: undefined,
+    expectedDelivery: '',
+    paymentMethod: '',
+    notes: '',
+    purchaseType: 'store',
+    subscriptionId: undefined,
+    status: 'ordered',
+    deliveredDate: undefined,
+  };
+
   const [form, setForm] = useState<Omit<Purchase, 'id'>>(
-    existing ? { ...existing } : { ...emptyForm },
+    existing
+      ? { ...existing, currency: existing.currency ?? settings.baseCurrency }
+      : emptyForm,
   );
   const [touchedTotal, setTouchedTotal] = useState(false);
+  const [touchedBase, setTouchedBase] = useState(false);
+  const [rate, setRate] = useState<number | null>(null);
+  const [rateError, setRateError] = useState(false);
+  const [coverStatus, setCoverStatus] = useState<string>('');
+
+  const initial = splitDelivery(form.expectedDelivery);
+  const [month, setMonth] = useState(initial.month);
+  const [day, setDay] = useState(initial.day);
+
+  const baseCurrency = settings.baseCurrency;
+  const currency = form.currency || baseCurrency;
+  const needsConversion = currency !== baseCurrency;
 
   const computedTotal = form.price + form.shipping;
   const total = touchedTotal ? form.totalCost : computedTotal;
+
+  useEffect(() => {
+    if (!needsConversion) {
+      setRate(null);
+      setRateError(false);
+      return;
+    }
+    let cancelled = false;
+    setRateError(false);
+    fetchRate(currency, baseCurrency).then((r) => {
+      if (cancelled) return;
+      if (r == null) setRateError(true);
+      setRate(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currency, baseCurrency, needsConversion]);
+
+  const computedBase = rate != null ? total * rate : null;
+  const baseTotal = touchedBase
+    ? form.baseTotalCost ?? 0
+    : computedBase ?? form.baseTotalCost ?? 0;
 
   function set<K extends keyof Purchase>(key: K, value: Purchase[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -58,9 +118,34 @@ export default function AddEditPurchase() {
     return isNaN(n) ? 0 : n;
   }
 
+  async function findCover() {
+    if (!form.title.trim()) return;
+    setCoverStatus('Searching…');
+    const url = await searchCover(form.title, form.author);
+    if (url) {
+      set('coverUrl', url);
+      setCoverStatus('');
+    } else {
+      setCoverStatus('No cover found — you can upload one.');
+    }
+  }
+
+  async function handleUpload(file: File | undefined) {
+    if (!file) return;
+    const dataUrl = await readImageAsDataUrl(file);
+    set('coverUrl', dataUrl);
+    setCoverStatus('');
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const payload = { ...form, totalCost: total };
+    const payload: Omit<Purchase, 'id'> = {
+      ...form,
+      totalCost: total,
+      currency,
+      baseTotalCost: needsConversion ? baseTotal : undefined,
+      expectedDelivery: joinDelivery(month, day),
+    };
     if (existing) {
       updatePurchase({ ...payload, id: existing.id });
     } else {
@@ -75,6 +160,13 @@ export default function AddEditPurchase() {
       navigate('/purchases');
     }
   }
+
+  const titles = uniqueValues(purchases.map((p) => p.title));
+  const authors = uniqueValues(purchases.map((p) => p.author));
+  const editions = uniqueValues(purchases.map((p) => p.edition));
+  const stores = uniqueValues(purchases.map((p) => p.store));
+  const genres = uniqueValues(purchases.map((p) => p.genre));
+  const payments = uniqueValues(purchases.map((p) => p.paymentMethod));
 
   return (
     <div className="page">
@@ -121,27 +213,90 @@ export default function AddEditPurchase() {
           <input
             className="input"
             required
+            list="dl-titles"
             value={form.title}
-            onChange={(e) => set('title', e.target.value)}
+            onChange={(e) => set('title', toTitleCase(e.target.value))}
+            onBlur={() => {
+              if (form.title.trim() && !form.coverUrl) findCover();
+            }}
           />
+          <datalist id="dl-titles">
+            {titles.map((t) => (
+              <option key={t} value={t} />
+            ))}
+          </datalist>
         </label>
+
+        <div className="cover-section">
+          {form.coverUrl ? (
+            <img
+              className="cover-preview"
+              src={form.coverUrl}
+              alt="Book cover"
+            />
+          ) : (
+            <div className="cover-preview cover-placeholder" aria-hidden>
+              📖
+            </div>
+          )}
+          <div className="cover-actions">
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={findCover}
+            >
+              Find cover
+            </button>
+            <label className="btn btn-small cover-upload">
+              Upload
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => handleUpload(e.target.files?.[0])}
+              />
+            </label>
+            {form.coverUrl && (
+              <button
+                type="button"
+                className="btn btn-small"
+                onClick={() => set('coverUrl', undefined)}
+              >
+                Remove
+              </button>
+            )}
+            {coverStatus && <small className="hint">{coverStatus}</small>}
+          </div>
+        </div>
 
         <div className="field-row">
           <label className="field">
             <span>Author</span>
             <input
               className="input"
+              list="dl-authors"
               value={form.author}
-              onChange={(e) => set('author', e.target.value)}
+              onChange={(e) => set('author', toTitleCase(e.target.value))}
             />
+            <datalist id="dl-authors">
+              {authors.map((a) => (
+                <option key={a} value={a} />
+              ))}
+            </datalist>
           </label>
           <label className="field">
             <span>Edition</span>
             <input
               className="input"
+              list="dl-editions"
               value={form.edition}
-              onChange={(e) => set('edition', e.target.value)}
+              onChange={(e) => set('edition', toTitleCase(e.target.value))}
             />
+            <datalist id="dl-editions">
+              {editions.map((x) => (
+                <option key={x} value={x} />
+              ))}
+            </datalist>
           </label>
         </div>
 
@@ -150,17 +305,29 @@ export default function AddEditPurchase() {
             <span>Genre</span>
             <input
               className="input"
+              list="dl-genres"
               value={form.genre}
-              onChange={(e) => set('genre', e.target.value)}
+              onChange={(e) => set('genre', toTitleCase(e.target.value))}
             />
+            <datalist id="dl-genres">
+              {genres.map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
           </label>
           <label className="field">
             <span>Store</span>
             <input
               className="input"
+              list="dl-stores"
               value={form.store}
-              onChange={(e) => set('store', e.target.value)}
+              onChange={(e) => set('store', toTitleCase(e.target.value))}
             />
+            <datalist id="dl-stores">
+              {stores.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
           </label>
         </div>
 
@@ -183,6 +350,24 @@ export default function AddEditPurchase() {
             />
           </label>
         </div>
+
+        <label className="field">
+          <span>Currency</span>
+          <select
+            className="input"
+            value={currency}
+            onChange={(e) => {
+              set('currency', e.target.value);
+              setTouchedBase(false);
+            }}
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <div className="field-row">
           <label className="field">
@@ -210,7 +395,7 @@ export default function AddEditPurchase() {
         </div>
 
         <label className="field">
-          <span>Total cost</span>
+          <span>Total cost ({currency})</span>
           <input
             className="input"
             type="number"
@@ -227,25 +412,71 @@ export default function AddEditPurchase() {
           </small>
         </label>
 
+        {needsConversion && (
+          <label className="field">
+            <span>Total in {baseCurrency}</span>
+            <input
+              className="input"
+              type="number"
+              step="0.01"
+              min="0"
+              value={baseTotal || ''}
+              onChange={(e) => {
+                setTouchedBase(true);
+                set('baseTotalCost', num(e.target.value));
+              }}
+            />
+            <small className="hint">
+              {rateError
+                ? 'Could not fetch a live rate — enter the converted total manually.'
+                : rate != null
+                  ? `Live rate: 1 ${currency} = ${rate.toFixed(4)} ${baseCurrency}. Edit to override.`
+                  : 'Fetching live exchange rate…'}
+            </small>
+          </label>
+        )}
+
         <div className="field-row">
           <label className="field">
-            <span>Expected delivery</span>
+            <span>Expected delivery (month)</span>
             <input
               className="input"
-              type="date"
-              value={form.expectedDelivery}
-              onChange={(e) => set('expectedDelivery', e.target.value)}
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
             />
           </label>
           <label className="field">
-            <span>Payment method</span>
-            <input
+            <span>Day (optional)</span>
+            <select
               className="input"
-              value={form.paymentMethod}
-              onChange={(e) => set('paymentMethod', e.target.value)}
-            />
+              value={day}
+              onChange={(e) => setDay(e.target.value)}
+            >
+              <option value="">Any day</option>
+              {DAYS.map((d) => (
+                <option key={d} value={String(d)}>
+                  {d}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
+
+        <label className="field">
+          <span>Payment method</span>
+          <input
+            className="input"
+            list="dl-payments"
+            value={form.paymentMethod}
+            onChange={(e) => set('paymentMethod', e.target.value)}
+          />
+          <datalist id="dl-payments">
+            {payments.map((p) => (
+              <option key={p} value={p} />
+            ))}
+          </datalist>
+        </label>
 
         <label className="field">
           <span>Status</span>

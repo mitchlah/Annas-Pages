@@ -1,23 +1,49 @@
-import type { AppData, Purchase, Subscription } from './types';
+import type {
+  AppData,
+  Purchase,
+  Subscription,
+  SubscriptionFrequency,
+} from './types';
+import { DEFAULT_SETTINGS } from './types';
 
 // All persistence goes through this module so the storage backend can be
 // swapped (e.g. for a cloud database) without touching the rest of the app.
 
 const STORAGE_KEY = 'annas-pages-data-v1';
 
-const emptyData: AppData = { purchases: [], subscriptions: [] };
+function emptyData(): AppData {
+  return { purchases: [], subscriptions: [], settings: { ...DEFAULT_SETTINGS } };
+}
+
+function migrateSubscription(raw: Record<string, unknown>): Subscription {
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? ''),
+    provider: String(raw.provider ?? ''),
+    cost: Number(raw.cost ?? raw.monthlyCost ?? 0),
+    frequency: (raw.frequency as SubscriptionFrequency) ?? 'monthly',
+    billingDay: Number(raw.billingDay ?? 1),
+    paymentMethod: String(raw.paymentMethod ?? ''),
+    startDate: String(raw.startDate ?? ''),
+    active: raw.active !== false,
+    notes: String(raw.notes ?? ''),
+  };
+}
 
 export function loadData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...emptyData };
+    if (!raw) return emptyData();
     const parsed = JSON.parse(raw) as Partial<AppData>;
     return {
-      purchases: parsed.purchases ?? [],
-      subscriptions: parsed.subscriptions ?? [],
+      purchases: (parsed.purchases ?? []) as Purchase[],
+      subscriptions: (parsed.subscriptions ?? []).map((s) =>
+        migrateSubscription(s as unknown as Record<string, unknown>),
+      ),
+      settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
     };
   } catch {
-    return { ...emptyData };
+    return emptyData();
   }
 }
 
