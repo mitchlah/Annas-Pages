@@ -589,6 +589,35 @@ textarea.input {
   border-bottom: none;
 }
 
+/* ---------- CSV import ---------- */
+.map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.map-label {
+  flex: 0 0 38%;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.map-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.import-error {
+  color: var(--warn);
+}
+
 /* ---------- Modal ---------- */
 .modal-backdrop {
   position: fixed;

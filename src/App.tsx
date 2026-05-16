@@ -7,6 +7,7 @@ import AddEditPurchase from './pages/AddEditPurchase';
 import Library from './pages/Library';
 import Subscriptions from './pages/Subscriptions';
 import Settings from './pages/Settings';
+import ImportCsv from './pages/ImportCsv';
 import { useData } from './data/store';
 import { applyTheme } from './utils/theme';
 
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/library" element={<Library />} />
         <Route path="/subscriptions" element={<Subscriptions />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/import" element={<ImportCsv />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

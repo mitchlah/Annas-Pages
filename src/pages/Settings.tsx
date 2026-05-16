@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useData } from '../data/store';
 import PageHeader from '../components/PageHeader';
 import { formatCurrency } from '../utils/format';
@@ -97,6 +98,16 @@ export default function Settings() {
         <button className="btn btn-primary btn-block" onClick={exportAll}>
           Export data (JSON)
         </button>
+      </section>
+
+      <section className="card">
+        <h2 className="section-title">Import</h2>
+        <p className="hint">
+          Bring in existing purchases from a spreadsheet exported as CSV.
+        </p>
+        <Link to="/import" className="btn btn-primary btn-block">
+          Import from CSV
+        </Link>
       </section>
 
       <section className="card">

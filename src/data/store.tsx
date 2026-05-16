@@ -14,6 +14,7 @@ interface DataContextValue {
   subscriptions: Subscription[];
   settings: Settings;
   addPurchase: (p: Omit<Purchase, 'id'>) => void;
+  importPurchases: (list: Omit<Purchase, 'id'>[]) => void;
   updatePurchase: (p: Purchase) => void;
   deletePurchase: (id: string) => void;
   markDelivered: (id: string, deliveredDate: string) => void;
@@ -42,6 +43,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setData((d) => ({
           ...d,
           purchases: [...d.purchases, { ...p, id: createId() }],
+        })),
+      importPurchases: (list) =>
+        setData((d) => ({
+          ...d,
+          purchases: [
+            ...d.purchases,
+            ...list.map((p) => ({ ...p, id: createId() })),
+          ],
         })),
       updatePurchase: (p) =>
         setData((d) => ({
