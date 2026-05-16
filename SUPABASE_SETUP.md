@@ -42,14 +42,21 @@ create policy "Users update their own data"
 
 This gives every signed-in user one private row holding their whole library.
 
-## 3. Turn the magic-link email into a 6-digit code
+## 3. Turn the emails into a 6-digit code
 
-By default Supabase emails a link. We want a code instead.
+By default Supabase emails a confirmation/magic **link**. We want a code
+instead. Supabase uses **two** templates and you must edit **both**:
+
+- **Confirm signup** — sent the first time a new email signs in.
+- **Magic Link** — sent to returning users.
+
+If you only edit one, some users will still get a "confirm your email" link.
 
 1. Go to **Authentication → Providers → Email** and make sure it is
    enabled. Leave "Confirm email" on.
-2. Go to **Authentication → Email Templates → Magic Link**.
-3. Replace the message body with something like:
+2. Go to **Authentication → Email Templates**. For **both** the
+   **Confirm signup** and **Magic Link** templates, replace the message
+   body with something like:
 
    ```html
    <h2>Your Anna's Pages sign-in code</h2>
@@ -58,7 +65,8 @@ By default Supabase emails a link. We want a code instead.
    <p>The code expires shortly. If you didn't request it, ignore this email.</p>
    ```
 
-   The key part is `{{ .Token }}` — that is the 6-digit code.
+   The key part is `{{ .Token }}` — that is the 6-digit code. Make sure
+   neither template still contains `{{ .ConfirmationURL }}`.
 
 ## 4. Set the site URL
 
