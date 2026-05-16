@@ -33,21 +33,38 @@ function migrateSubscription(raw: Record<string, unknown>): Subscription {
   };
 }
 
+function coerceData(parsed: Partial<AppData>): AppData {
+  return {
+    purchases: (parsed.purchases ?? []) as Purchase[],
+    subscriptions: (parsed.subscriptions ?? []).map((s) =>
+      migrateSubscription(s as unknown as Record<string, unknown>),
+    ),
+    settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
+  };
+}
+
 export function loadData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyData();
-    const parsed = JSON.parse(raw) as Partial<AppData>;
-    return {
-      purchases: (parsed.purchases ?? []) as Purchase[],
-      subscriptions: (parsed.subscriptions ?? []).map((s) =>
-        migrateSubscription(s as unknown as Record<string, unknown>),
-      ),
-      settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
-    };
+    return coerceData(JSON.parse(raw) as Partial<AppData>);
   } catch {
     return emptyData();
   }
+}
+
+// Parses an exported backup file. Throws if the file is not valid.
+export function parseBackup(json: string): AppData {
+  const parsed = JSON.parse(json) as Partial<AppData>;
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    !Array.isArray(parsed.purchases) ||
+    !Array.isArray(parsed.subscriptions)
+  ) {
+    throw new Error('Not a valid Anna’s Pages backup file.');
+  }
+  return coerceData(parsed);
 }
 
 export function saveData(data: AppData): void {

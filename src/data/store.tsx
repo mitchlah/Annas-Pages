@@ -23,6 +23,7 @@ interface DataContextValue {
   deleteSubscription: (id: string) => void;
   updateSettings: (partial: Partial<Settings>) => void;
   exportAll: () => void;
+  restoreData: (data: AppData) => void;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -97,6 +98,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           settings: { ...d.settings, ...partial },
         })),
       exportAll: () => exportData(data),
+      restoreData: (next) => setData(next),
     }),
     [data],
   );

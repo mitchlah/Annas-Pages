@@ -1,15 +1,49 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../data/store';
 import PageHeader from '../components/PageHeader';
 import { formatCurrency } from '../utils/format';
 import { CURRENCIES } from '../utils/currency';
 import { THEME_PRESETS } from '../utils/theme';
+import { parseBackup } from '../data/repository';
 
 export default function Settings() {
-  const { purchases, subscriptions, settings, updateSettings, exportAll } =
-    useData();
+  const {
+    purchases,
+    subscriptions,
+    settings,
+    updateSettings,
+    exportAll,
+    restoreData,
+  } = useData();
+
+  const [restoreMsg, setRestoreMsg] = useState('');
+  const [restoreError, setRestoreError] = useState(false);
 
   const base = settings.baseCurrency;
+
+  async function handleRestore(file: File | undefined) {
+    if (!file) return;
+    setRestoreMsg('');
+    try {
+      const data = parseBackup(await file.text());
+      const ok = confirm(
+        `Restore ${data.purchases.length} purchases and ` +
+          `${data.subscriptions.length} subscriptions? ` +
+          'This replaces all current data.',
+      );
+      if (!ok) return;
+      restoreData(data);
+      setRestoreError(false);
+      setRestoreMsg(
+        `Restored ${data.purchases.length} purchases and ` +
+          `${data.subscriptions.length} subscriptions.`,
+      );
+    } catch {
+      setRestoreError(true);
+      setRestoreMsg('That file is not a valid Anna’s Pages backup.');
+    }
+  }
   const totalSpent = purchases.reduce(
     (sum, p) => sum + (p.baseTotalCost ?? p.totalCost),
     0,
@@ -98,6 +132,27 @@ export default function Settings() {
         <button className="btn btn-primary btn-block" onClick={exportAll}>
           Export data (JSON)
         </button>
+        <p className="hint">
+          Restore replaces all current data with the contents of a backup
+          file you previously exported.
+        </p>
+        <label className="btn btn-block cover-upload">
+          Restore from backup
+          <input
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              handleRestore(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+        </label>
+        {restoreMsg && (
+          <p className={'hint' + (restoreError ? ' import-error' : '')}>
+            {restoreMsg}
+          </p>
+        )}
       </section>
 
       <section className="card">
