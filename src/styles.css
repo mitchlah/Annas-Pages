@@ -590,6 +590,60 @@ textarea.input {
   border-bottom: none;
 }
 
+/* ---------- Splash & login ---------- */
+.splash {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.splash-logo {
+  font-size: 44px;
+}
+
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 22px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.login-logo {
+  font-size: 44px;
+}
+
+.login-card h1 {
+  color: var(--brand);
+  font-size: 24px;
+  margin: 6px 0 16px;
+}
+
+.login-text {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+
+.login-card .field > span {
+  text-align: left;
+}
+
 /* ---------- Renewals ---------- */
 .renewal-list {
   display: flex;

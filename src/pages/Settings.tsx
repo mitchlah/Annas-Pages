@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../data/store';
+import { useAuth } from '../auth/AuthProvider';
 import PageHeader from '../components/PageHeader';
 import { formatCurrency } from '../utils/format';
 import { CURRENCIES } from '../utils/currency';
@@ -16,6 +17,8 @@ export default function Settings() {
     exportAll,
     restoreData,
   } = useData();
+
+  const { cloudEnabled, user, signOut } = useAuth();
 
   const [restoreMsg, setRestoreMsg] = useState('');
   const [restoreError, setRestoreError] = useState(false);
@@ -52,6 +55,28 @@ export default function Settings() {
   return (
     <div className="page">
       <PageHeader title="Settings" subtitle="Manage your data" />
+
+      {cloudEnabled && user && (
+        <section className="card">
+          <h2 className="section-title">Account</h2>
+          <div className="kv">
+            <span>Signed in as</span>
+            <strong>{user.email}</strong>
+          </div>
+          <p className="hint">
+            Your library is saved to your account and synced to every
+            device you sign in on.
+          </p>
+          <button
+            className="btn btn-block"
+            onClick={() => {
+              if (confirm('Sign out of Anna’s Pages?')) signOut();
+            }}
+          >
+            Sign out
+          </button>
+        </section>
+      )}
 
       <section className="card">
         <h2 className="section-title">Currency</h2>
@@ -126,8 +151,9 @@ export default function Settings() {
       <section className="card">
         <h2 className="section-title">Backup</h2>
         <p className="hint">
-          Your data is stored on this device only. Export a copy regularly
-          so you don't lose it.
+          {cloudEnabled
+            ? 'Your data is saved to your account. You can still export a copy as a file.'
+            : 'Your data is stored on this device only. Export a copy regularly so you don’t lose it.'}
         </p>
         <button className="btn btn-primary btn-block" onClick={exportAll}>
           Export data (JSON)
@@ -168,8 +194,7 @@ export default function Settings() {
       <section className="card">
         <h2 className="section-title">About</h2>
         <p className="hint">
-          Anna's Pages — a personal book purchase tracker. Cloud sync and
-          login are planned for a future update.
+          Anna's Pages — a personal book purchase tracker.
         </p>
       </section>
     </div>

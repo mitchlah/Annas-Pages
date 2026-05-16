@@ -16,11 +16,19 @@ a replacement for tracking everything in a spreadsheet.
 
 ## Data storage
 
-Data is currently stored **locally in the browser** (`localStorage`). All
-persistence goes through `src/data/repository.ts`, so a cloud backend (with
-login and cross-device sync) can be added later without changing the UI.
+The app works in two modes:
 
-Use **Settings → Export data** regularly to back up your records.
+- **Local-only** (no Supabase configured) — data is stored in the browser
+  (`localStorage`), no login.
+- **Cloud** (Supabase configured) — passwordless email sign-in; each user's
+  library is saved to their account and synced across their devices. Data is
+  cached locally too, so the app loads instantly and survives brief offline
+  periods.
+
+To enable cloud mode and login, follow [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md).
+
+Use **Settings → Export data** any time to download a JSON backup, and
+**Restore from backup** to load one.
 
 ## Run locally
 

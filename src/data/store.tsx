@@ -3,11 +3,24 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type { AppData, Purchase, Settings, Subscription } from './types';
 import { createId, exportData, loadData, saveData } from './repository';
+import { fetchCloudData, saveCloudData } from './cloud';
+import { useAuth } from '../auth/AuthProvider';
+
+let cloudTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleCloudSave(userId: string, data: AppData) {
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(() => {
+    saveCloudData(userId, data).catch(() => {
+      /* offline or transient — local cache keeps the data */
+    });
+  }, 800);
+}
 
 interface DataContextValue {
   purchases: Purchase[];
@@ -29,11 +42,56 @@ interface DataContextValue {
 const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  const auth = useAuth();
   const [data, setData] = useState<AppData>(() => loadData());
+  const [loading, setLoading] = useState(
+    auth.cloudEnabled && !!auth.user,
+  );
+  const loadedRef = useRef(false);
 
+  // Load the signed-in user's library from the cloud. On their very
+  // first sign-in (no cloud row yet) the local data is migrated up.
+  useEffect(() => {
+    if (!auth.cloudEnabled || !auth.user) {
+      loadedRef.current = true;
+      return;
+    }
+    const userId = auth.user.id;
+    let cancelled = false;
+    loadedRef.current = false;
+    setLoading(true);
+    fetchCloudData(userId)
+      .then((cloud) => {
+        if (cancelled) return;
+        if (cloud) {
+          setData(cloud);
+        } else {
+          const local = loadData();
+          setData(local);
+          saveCloudData(userId, local).catch(() => {});
+        }
+      })
+      .catch(() => {
+        /* keep the local cache if the cloud is unreachable */
+      })
+      .finally(() => {
+        if (cancelled) return;
+        loadedRef.current = true;
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.cloudEnabled, auth.user?.id]);
+
+  // Persist: always cache locally; push to the cloud once loaded.
   useEffect(() => {
     saveData(data);
-  }, [data]);
+    if (!loadedRef.current) return;
+    if (auth.cloudEnabled && auth.user) {
+      scheduleCloudSave(auth.user.id, data);
+    }
+  }, [data, auth.cloudEnabled, auth.user]);
 
   const value = useMemo<DataContextValue>(
     () => ({
@@ -102,6 +160,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }),
     [data],
   );
+
+  if (loading) {
+    return (
+      <div className="splash">
+        <div className="splash-logo" aria-hidden>
+          📚
+        </div>
+        <p>Loading your library…</p>
+      </div>
+    );
+  }
 
   return (
     <DataContext.Provider value={value}>{children}</DataContext.Provider>

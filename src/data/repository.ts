@@ -33,7 +33,7 @@ function migrateSubscription(raw: Record<string, unknown>): Subscription {
   };
 }
 
-function coerceData(parsed: Partial<AppData>): AppData {
+export function coerceData(parsed: Partial<AppData>): AppData {
   return {
     purchases: (parsed.purchases ?? []) as Purchase[],
     subscriptions: (parsed.subscriptions ?? []).map((s) =>
