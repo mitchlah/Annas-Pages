@@ -8,19 +8,16 @@ import {
   type ReactNode,
 } from 'react';
 import type { AppData, Purchase, Settings, Subscription } from './types';
-import { createId, exportData, loadData, saveData } from './repository';
+import {
+  coerceData,
+  createId,
+  exportData,
+  loadData,
+  saveData,
+} from './repository';
 import { fetchCloudData, saveCloudData } from './cloud';
+import { supabase } from './supabase';
 import { useAuth } from '../auth/AuthProvider';
-
-let cloudTimer: ReturnType<typeof setTimeout> | undefined;
-function scheduleCloudSave(userId: string, data: AppData) {
-  clearTimeout(cloudTimer);
-  cloudTimer = setTimeout(() => {
-    saveCloudData(userId, data).catch(() => {
-      /* offline or transient — local cache keeps the data */
-    });
-  }, 800);
-}
 
 interface DataContextValue {
   purchases: Purchase[];
@@ -48,6 +45,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     auth.cloudEnabled && !!auth.user,
   );
   const loadedRef = useRef(false);
+  // Serialised form of the data last known to match the cloud — used to
+  // ignore our own realtime echoes and skip redundant saves.
+  const syncedRef = useRef('');
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // Load the signed-in user's library from the cloud. On their very
   // first sign-in (no cloud row yet) the local data is migrated up.
@@ -64,9 +65,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .then((cloud) => {
         if (cancelled) return;
         if (cloud) {
+          syncedRef.current = JSON.stringify(cloud);
           setData(cloud);
         } else {
           const local = loadData();
+          syncedRef.current = JSON.stringify(local);
           setData(local);
           saveCloudData(userId, local).catch(() => {});
         }
@@ -84,13 +87,51 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   }, [auth.cloudEnabled, auth.user?.id]);
 
+  // Realtime: apply changes made on the user's other devices at once.
+  useEffect(() => {
+    if (!supabase || !auth.cloudEnabled || !auth.user) return;
+    const userId = auth.user.id;
+    const channel = supabase
+      .channel(`user_data:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_data',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const incoming = (payload.new as { data?: Partial<AppData> })
+            ?.data;
+          if (!incoming) return;
+          const serialized = JSON.stringify(incoming);
+          if (serialized === syncedRef.current) return; // our own echo
+          syncedRef.current = serialized;
+          setData(coerceData(incoming));
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase!.removeChannel(channel);
+    };
+  }, [auth.cloudEnabled, auth.user?.id]);
+
   // Persist: always cache locally; push to the cloud once loaded.
   useEffect(() => {
     saveData(data);
     if (!loadedRef.current) return;
-    if (auth.cloudEnabled && auth.user) {
-      scheduleCloudSave(auth.user.id, data);
-    }
+    if (!auth.cloudEnabled || !auth.user) return;
+    const serialized = JSON.stringify(data);
+    if (serialized === syncedRef.current) return; // unchanged / from remote
+    const userId = auth.user.id;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      syncedRef.current = serialized;
+      saveCloudData(userId, data).catch(() => {
+        /* offline or transient — local cache keeps the data */
+      });
+    }, 600);
   }, [data, auth.cloudEnabled, auth.user]);
 
   const value = useMemo<DataContextValue>(

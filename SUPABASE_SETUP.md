@@ -38,9 +38,13 @@ create policy "Users update their own data"
   on public.user_data for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Enable realtime so changes sync instantly across the user's devices.
+alter publication supabase_realtime add table public.user_data;
 ```
 
-This gives every signed-in user one private row holding their whole library.
+This gives every signed-in user one private row holding their whole library,
+and broadcasts updates to their other open devices in real time.
 
 ## 3. Turn the emails into a 6-digit code
 
