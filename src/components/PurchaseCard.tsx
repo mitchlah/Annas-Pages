@@ -7,9 +7,14 @@ import { daysUntil, formatCurrency, formatDate } from '../utils/format';
 interface Props {
   purchase: Purchase;
   onMarkDelivered?: (id: string) => void;
+  hideType?: boolean;
 }
 
-export default function PurchaseCard({ purchase, onMarkDelivered }: Props) {
+export default function PurchaseCard({
+  purchase,
+  onMarkDelivered,
+  hideType,
+}: Props) {
   const navigate = useNavigate();
   const { settings } = useData();
   const currency = purchase.currency ?? settings.baseCurrency;
@@ -74,9 +79,11 @@ export default function PurchaseCard({ purchase, onMarkDelivered }: Props) {
                 .join(' · ') || 'No author'}
             </p>
             <div className="purchase-tags">
-              <span className="tag">
-                {PURCHASE_TYPE_LABELS[purchase.purchaseType]}
-              </span>
+              {!hideType && (
+                <span className="tag">
+                  {PURCHASE_TYPE_LABELS[purchase.purchaseType]}
+                </span>
+              )}
               {purchase.store && (
                 <span className="tag">{purchase.store}</span>
               )}

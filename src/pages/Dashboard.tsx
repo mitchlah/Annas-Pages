@@ -81,6 +81,7 @@ export default function Dashboard() {
               <PurchaseCard
                 key={p.id}
                 purchase={p}
+                hideType
                 onMarkDelivered={(id) => markDelivered(id, todayIso())}
               />
             ))}
