@@ -7,6 +7,8 @@ import { todayIso } from '../utils/format';
 import { toTitleCase, uniqueValues } from '../utils/text';
 import { CURRENCIES, fetchRate } from '../utils/currency';
 import { readImageAsDataUrl, searchCover } from '../utils/covers';
+import { computeRenewals } from '../utils/renewals';
+import { formatDate } from '../utils/format';
 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
@@ -60,6 +62,7 @@ export default function AddEditPurchase() {
     notes: '',
     purchaseType: 'store',
     subscriptionId: undefined,
+    subscriptionRenewalDate: undefined,
     status: 'ordered',
     deliveredDate: undefined,
   };
@@ -81,7 +84,18 @@ export default function AddEditPurchase() {
 
   const baseCurrency = settings.baseCurrency;
   const currency = form.currency || baseCurrency;
-  const needsConversion = currency !== baseCurrency;
+  const isSub = form.purchaseType === 'subscription';
+  const needsConversion = !isSub && currency !== baseCurrency;
+
+  const selectedSub = subscriptions.find(
+    (s) => s.id === form.subscriptionId,
+  );
+  const renewalOptions = selectedSub
+    ? (() => {
+        const r = computeRenewals(selectedSub, 6, 12);
+        return [...[...r.past].reverse(), ...r.future];
+      })()
+    : [];
 
   const computedTotal = form.price + form.shipping;
   const total = touchedTotal ? form.totalCost : computedTotal;
@@ -141,9 +155,14 @@ export default function AddEditPurchase() {
     e.preventDefault();
     const payload: Omit<Purchase, 'id'> = {
       ...form,
-      totalCost: total,
-      currency,
+      price: isSub ? 0 : form.price,
+      shipping: isSub ? 0 : form.shipping,
+      totalCost: isSub ? 0 : total,
+      currency: isSub ? baseCurrency : currency,
       baseTotalCost: needsConversion ? baseTotal : undefined,
+      subscriptionRenewalDate: isSub
+        ? form.subscriptionRenewalDate
+        : undefined,
       expectedDelivery: joinDelivery(month, day),
     };
     if (existing) {
@@ -188,20 +207,49 @@ export default function AddEditPurchase() {
           </select>
         </label>
 
-        {form.purchaseType === 'subscription' && (
+        {isSub && (
           <label className="field">
             <span>Subscription</span>
             <select
               className="input"
               value={form.subscriptionId ?? ''}
-              onChange={(e) =>
-                set('subscriptionId', e.target.value || undefined)
-              }
+              onChange={(e) => {
+                const subId = e.target.value || undefined;
+                const sub = subscriptions.find((s) => s.id === subId);
+                const next = sub
+                  ? computeRenewals(sub, 1, 0).next ?? undefined
+                  : undefined;
+                setForm((f) => ({
+                  ...f,
+                  subscriptionId: subId,
+                  subscriptionRenewalDate: next,
+                }));
+              }}
             >
               <option value="">— Select subscription —</option>
               {subscriptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {isSub && form.subscriptionId && (
+          <label className="field">
+            <span>Renewal this book belongs to</span>
+            <select
+              className="input"
+              value={form.subscriptionRenewalDate ?? ''}
+              onChange={(e) =>
+                set('subscriptionRenewalDate', e.target.value || undefined)
+              }
+            >
+              <option value="">— Select renewal —</option>
+              {renewalOptions.map((d) => (
+                <option key={d} value={d}>
+                  {formatDate(d)}
                 </option>
               ))}
             </select>
@@ -351,6 +399,8 @@ export default function AddEditPurchase() {
           </label>
         </div>
 
+        {!isSub && (
+          <>
         <label className="field">
           <span>Currency</span>
           <select
@@ -411,6 +461,8 @@ export default function AddEditPurchase() {
             Auto-calculated from price + shipping; edit to override.
           </small>
         </label>
+          </>
+        )}
 
         {needsConversion && (
           <label className="field">

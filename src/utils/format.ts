@@ -33,6 +33,30 @@ export function formatDate(iso: string): string {
   });
 }
 
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
+}
+
+// e.g. "May 20th" — month and ordinal day, no year.
+export function formatDayMonth(iso: string): string {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return '—';
+  const month = d.toLocaleDateString(undefined, { month: 'long' });
+  return `${month} ${ordinal(d.getDate())}`;
+}
+
+// Short relative label, e.g. "4d", "today", "3d ago".
+export function daysRemainingLabel(iso: string): string {
+  const days = daysUntil(iso);
+  if (days === null) return '';
+  if (days === 0) return 'today';
+  if (days > 0) return `${days}d`;
+  return `${Math.abs(days)}d ago`;
+}
+
 export function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }

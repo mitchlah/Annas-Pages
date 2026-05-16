@@ -63,7 +63,9 @@ export default function PurchaseCard({ purchase, onMarkDelivered }: Props) {
                 {purchase.title || 'Untitled'}
               </h3>
               <span className="purchase-cost">
-                {formatCurrency(purchase.totalCost, currency)}
+                {purchase.purchaseType === 'subscription'
+                  ? 'Included'
+                  : formatCurrency(purchase.totalCost, currency)}
               </span>
             </div>
             <p className="purchase-meta">

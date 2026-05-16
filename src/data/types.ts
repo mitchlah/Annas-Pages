@@ -27,6 +27,7 @@ export interface Purchase {
   notes: string;
   purchaseType: PurchaseType;
   subscriptionId?: string;
+  subscriptionRenewalDate?: string;
   status: PurchaseStatus;
   deliveredDate?: string;
 }
