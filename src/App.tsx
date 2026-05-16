@@ -6,6 +6,7 @@ import Purchases from './pages/Purchases';
 import AddEditPurchase from './pages/AddEditPurchase';
 import Library from './pages/Library';
 import Subscriptions from './pages/Subscriptions';
+import SubscriptionDetail from './pages/SubscriptionDetail';
 import Settings from './pages/Settings';
 import ImportCsv from './pages/ImportCsv';
 import { useData } from './data/store';
@@ -27,6 +28,10 @@ export default function App() {
         <Route path="/purchases/:id/edit" element={<AddEditPurchase />} />
         <Route path="/library" element={<Library />} />
         <Route path="/subscriptions" element={<Subscriptions />} />
+        <Route
+          path="/subscriptions/:id"
+          element={<SubscriptionDetail />}
+        />
         <Route path="/settings" element={<Settings />} />
         <Route path="/import" element={<ImportCsv />} />
         <Route path="*" element={<Navigate to="/" replace />} />

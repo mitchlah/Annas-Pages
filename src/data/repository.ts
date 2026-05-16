@@ -22,7 +22,10 @@ function migrateSubscription(raw: Record<string, unknown>): Subscription {
     provider: String(raw.provider ?? ''),
     cost: Number(raw.cost ?? raw.monthlyCost ?? 0),
     frequency: (raw.frequency as SubscriptionFrequency) ?? 'monthly',
-    billingDay: Number(raw.billingDay ?? 1),
+    renewalDate: String(raw.renewalDate ?? raw.startDate ?? ''),
+    skippedRenewals: Array.isArray(raw.skippedRenewals)
+      ? (raw.skippedRenewals as unknown[]).map(String)
+      : [],
     paymentMethod: String(raw.paymentMethod ?? ''),
     startDate: String(raw.startDate ?? ''),
     active: raw.active !== false,

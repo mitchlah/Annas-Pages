@@ -37,7 +37,8 @@ export interface Subscription {
   provider: string;
   cost: number;
   frequency: SubscriptionFrequency;
-  billingDay: number;
+  renewalDate: string;
+  skippedRenewals: string[];
   paymentMethod: string;
   startDate: string;
   active: boolean;
@@ -74,7 +75,7 @@ export const FREQUENCY_LABELS: Record<SubscriptionFrequency, string> = {
   annual: 'Annual',
 };
 
-const FREQUENCY_MONTHS: Record<SubscriptionFrequency, number> = {
+export const CYCLE_MONTHS: Record<SubscriptionFrequency, number> = {
   monthly: 1,
   bimonthly: 2,
   quarterly: 3,
@@ -83,5 +84,5 @@ const FREQUENCY_MONTHS: Record<SubscriptionFrequency, number> = {
 };
 
 export function monthlyEquivalent(sub: Subscription): number {
-  return sub.cost / FREQUENCY_MONTHS[sub.frequency];
+  return sub.cost / CYCLE_MONTHS[sub.frequency];
 }
