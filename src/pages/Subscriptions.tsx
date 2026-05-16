@@ -220,19 +220,21 @@ export default function Subscriptions() {
               <div className="field-row">
                 <label className="field">
                   <span>Billing day</span>
-                  <input
+                  <select
                     className="input"
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={form.billingDay || ''}
+                    value={form.billingDay}
                     onChange={(e) =>
-                      set(
-                        'billingDay',
-                        Math.min(31, Math.max(1, num(e.target.value))),
-                      )
+                      set('billingDay', Number(e.target.value))
                     }
-                  />
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(
+                      (d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ),
+                    )}
+                  </select>
                 </label>
               </div>
               <div className="field-row">
