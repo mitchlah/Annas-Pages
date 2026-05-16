@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useData } from '../data/store';
 import { useAuth } from '../auth/AuthProvider';
 import PageHeader from '../components/PageHeader';
+import Toggle from '../components/Toggle';
 import { formatCurrency } from '../utils/format';
 import { CURRENCIES } from '../utils/currency';
 import { THEME_PRESETS } from '../utils/theme';
@@ -130,14 +131,11 @@ export default function Settings() {
             onChange={(e) => updateSettings({ themeColor: e.target.value })}
           />
         </label>
-        <label className="field-check">
-          <input
-            type="checkbox"
-            checked={settings.darkMode}
-            onChange={(e) => updateSettings({ darkMode: e.target.checked })}
-          />
-          <span>Dark mode</span>
-        </label>
+        <Toggle
+          label="Dark mode"
+          checked={settings.darkMode}
+          onChange={(v) => updateSettings({ darkMode: v })}
+        />
       </section>
 
       <section className="card">
