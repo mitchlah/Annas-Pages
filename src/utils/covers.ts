@@ -25,11 +25,39 @@ export async function searchCover(
   }
 }
 
+// Reads an uploaded image, downscales it so its longest edge is at most
+// MAX_EDGE pixels, and returns a compressed JPEG data URL. This keeps cover
+// images small enough to fit comfortably in localStorage.
+const MAX_EDGE = 600;
+const JPEG_QUALITY = 0.8;
+
 export function readImageAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const scale = Math.min(
+        1,
+        MAX_EDGE / Math.max(img.width, img.height),
+      );
+      const width = Math.round(img.width * scale);
+      const height = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Could not process the image.'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', JPEG_QUALITY));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Could not load the selected image.'));
+    };
+    img.src = objectUrl;
   });
 }
