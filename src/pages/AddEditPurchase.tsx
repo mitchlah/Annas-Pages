@@ -146,9 +146,13 @@ export default function AddEditPurchase() {
 
   async function handleUpload(file: File | undefined) {
     if (!file) return;
-    const dataUrl = await readImageAsDataUrl(file);
-    set('coverUrl', dataUrl);
-    setCoverStatus('');
+    try {
+      const dataUrl = await readImageAsDataUrl(file);
+      set('coverUrl', dataUrl);
+      setCoverStatus('');
+    } catch {
+      setCoverStatus('Could not read that image — please try another.');
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {

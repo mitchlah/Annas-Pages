@@ -67,8 +67,14 @@ export function parseBackup(json: string): AppData {
   return coerceData(parsed);
 }
 
-export function saveData(data: AppData): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+export function saveData(data: AppData): boolean {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return true;
+  } catch (err) {
+    console.warn('Failed to persist data to localStorage', err);
+    return false;
+  }
 }
 
 export function createId(): string {
